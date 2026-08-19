@@ -642,11 +642,33 @@ public static class OsbMath
         return t => ease(t0 + dt * t);
     }
 
+    /// <inheritdoc cref="CreateEaseList(Int32, Double, Double, Func{Double, Double}, bool)"/>
     public static List<Double> CreateEaseList(
         Int32 n,
         Double min,
         Double max,
-        OsbEasing ease = Ease.None)
+        OsbEasing ease = Ease.None,
+        bool clamp = false)
+        => CreateEaseList(n, min, max, GetEaseFunction(ease), clamp);
+
+    /// <summary>
+    /// <see cref="FillEase(Span{Double}, Double, Double, Func{Double, Double}, bool)"/> into a
+    /// fresh list of <paramref name="n"/> values.
+    /// </summary>
+    /// <param name="n">How many values to produce.</param>
+    /// <param name="min">Value of the first entry.</param>
+    /// <param name="max">Value of the last entry.</param>
+    /// <param name="ease">The curve to distribute along.</param>
+    /// <param name="clamp">
+    /// Hold the result inside [min, max]. Back and Elastic curves overshoot by design, so
+    /// without this they distribute values outside the range you asked for.
+    /// </param>
+    public static List<Double> CreateEaseList(
+        Int32 n,
+        Double min,
+        Double max,
+        Func<Double, Double> ease,
+        bool clamp = false)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(n, nameof(n));
         if (n == 1)
@@ -654,15 +676,19 @@ public static class OsbMath
 
         List<Double> result = new(n);
         result.AddRange(new Double[n]); // Single allocation.
-        FillEase(CollectionsMarshal.AsSpan(result), min, max, ease);
+        FillEase(CollectionsMarshal.AsSpan(result), min, max, ease, clamp);
 
         return result;
     }
 
+    /// <inheritdoc cref="EvaluateEaseAtTime(Double, Func{Double, Double}, bool)"/>
     public static Double EvaluateEaseAtTime(Double t, OsbEasing ease, bool clamp = false)
+        => EvaluateEaseAtTime(t, GetEaseFunction(ease), clamp);
+
+    /// <summary>One value off a curve, for when a whole buffer would be silly.</summary>
+    public static Double EvaluateEaseAtTime(Double t, Func<Double, Double> ease, bool clamp = false)
     {
-        Func<Double, Double> easing_func = GetEaseFunction(ease);
-        Double eased = easing_func(t);
+        Double eased = ease(t);
         if (clamp)
             return Math.Clamp(eased, 0d, 1d);
 
@@ -1067,9 +1093,16 @@ public static class OsbCommands
     }
 
     /// <summary>
-    /// Samples <paramref name="sampler"/> across [start, end]. Emits
-    /// <paramref name="samples"/> + 1 keyframes, since both endpoints are included.
+    /// Samples <paramref name="sampler"/> across [start, end].
     /// </summary>
+    /// <param name="samples">
+    /// How many keyframes to emit, both endpoints included. Matches
+    /// <see cref="OsbMath.Linspace"/> and <see cref="OsbMath.FillEase(Span{Double}, Double, Double, Func{Double, Double}, bool)"/>.
+    /// </param>
+    /// <param name="start">First sample time.</param>
+    /// <param name="end">Last sample time.</param>
+    /// <param name="sampler">Produces the value at a given time.</param>
+    /// <param name="lerp_func">Blends two values, e.g. <c>InterpolatingFunctions.Vector2</c>.</param>
     public static KeyframedValue<T> Sample<T>(
         Int32 samples,
         Double start,
@@ -1077,10 +1110,17 @@ public static class OsbCommands
         Func<Double, T> sampler,
         Func<T, T, Double, T> lerp_func)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(samples, nameof(samples));
+
         KeyframedValue<T> kf = new(lerp_func);
-        for (Int32 i = 0; i <= samples; ++i)
+        if (samples == 1)
         {
-            Double t = OsbMath.Lerp(start, end, i / (Double)samples);
+            kf.Add(start, sampler(start));
+            return kf;
+        }
+        for (Int32 i = 0; i < samples; ++i)
+        {
+            Double t = OsbMath.Lerp(start, end, i / (Double)(samples - 1));
             kf.Add(t, sampler(t));
         }
         return kf;
@@ -1098,8 +1138,8 @@ public static class OsbCommands
     /// <param name="to">Value at <paramref name="et"/>.</param>
     /// <param name="ease">The curve to bake.</param>
     /// <param name="samples">
-    /// Number of intervals, trading smoothness against command count. Emits one more
-    /// keyframe than this, since both endpoints are included.
+    /// How many keyframes to emit, both endpoints included. Trades smoothness against
+    /// command count.
     /// </param>
     public static KeyframedValue<Single> EaseKeyframes(
         Int32 st, Int32 et,
@@ -1112,10 +1152,15 @@ public static class OsbCommands
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(samples, nameof(samples));
 
         KeyframedValue<Single> kf = new((a, b, t) => (Single)OsbMath.Lerp(a, b, t));
-        Int32 dur = et - st;
-        for (Int32 i = 0; i <= samples; ++i)
+        if (samples == 1)
         {
-            Double t = (Double)i / samples;
+            kf.Add(st, from);
+            return kf;
+        }
+        Int32 dur = et - st;
+        for (Int32 i = 0; i < samples; ++i)
+        {
+            Double t = i / (Double)(samples - 1);
             Single v = (Single)OsbMath.Lerp(from, to, ease(t));
             kf.Add(st + (Int32)Math.Round(dur * t), v);
         }
@@ -1137,10 +1182,15 @@ public static class OsbCommands
             (Single)OsbMath.Lerp(a.X, b.X, t),
             (Single)OsbMath.Lerp(a.Y, b.Y, t)
         ));
-        Int32 dur = et - st;
-        for (Int32 i = 0; i <= samples; ++i)
+        if (samples == 1)
         {
-            Double t = (Double)i / samples;
+            kf.Add(st, from);
+            return kf;
+        }
+        Int32 dur = et - st;
+        for (Int32 i = 0; i < samples; ++i)
+        {
+            Double t = i / (Double)(samples - 1);
             Double eased = ease(t);
             Vector2 v = new(
                 (Single)OsbMath.Lerp(from.X, to.X, eased),
@@ -1170,7 +1220,7 @@ public static class OsbCommands
     /// a sprite from unwinding the long way round a wrap. Call it before <c>Optimize</c>
     /// and before <see cref="ApplyRotate"/>; it relies on the keyframes being in time order.
     /// </summary>
-    public static void UnwrapAngles(KeyframedValue<Single> kf)
+    public static void UnwrapAngles(this KeyframedValue<Single> kf)
     {
         if (kf.Count == 0)
             return;
