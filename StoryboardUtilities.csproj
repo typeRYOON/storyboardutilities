@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Emit StoryboardUtilities.xml so the /// comments reach IntelliSense in the
+         storyboard scripts. Copy it next to the .dll when deploying. CS1591 is off:
+         the docs sit on the API worth explaining, not on every enum alias. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="StorybrewCommon">
+      <HintPath>E:/ryoon/tools/osu/storybrew/StorybrewCommon.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenTK">
+      <HintPath>E:/ryoon/tools/osu/storybrew/OpenTK.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
