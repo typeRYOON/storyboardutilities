@@ -484,9 +484,6 @@ public static class OsbMath
             => t < 0.5d
                 ? (1d - Math.Sqrt(1d - Math.Pow(2d * t, 2d))) / 2d
                 : (Math.Sqrt(1d - Math.Pow(-2d * t + 2d, 2d)) + 1d) / 2d;
-        // The cubic term uses C1 + 1 (easings.net calls it c3), not C1. With C1 on both
-        // terms IBack(1) lands on 0 and OBack(0) lands on 1, so the curve ends where it
-        // started.
         public static Double IBack(Double t)
             => (C1 + 1d) * t * t * t - C1 * t * t;
         public static Double OBack(Double t)
