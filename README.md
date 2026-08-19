@@ -70,7 +70,7 @@ and restore it afterwards.
 
 `SpriteAllocator`, `OsbMath`, `OsbCommands`, `Logger`, the `SectionInfo` / `SectionTime` /
 `SectionPath` types, and shorthand aliases for the `Osb*` enums. Full walkthrough with
-examples: [osu! Storyboarding, Ryoon's helper library](https://ryoon.moe/blog/osu-sb/07-ryoon-helper-lib/).
+examples: [osu! Storyboarding, Ryoon's helper library](https://ryoon.moe/blog/osu-sb/library/).
 
 ## License
 
