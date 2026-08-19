@@ -1,0 +1,11 @@
+* text=auto
+
+# Sources are LF in the repo and on disk; pin them so Windows checkouts do not churn.
+*.cs          text eol=lf
+*.md          text eol=lf
+*.csproj      text eol=lf
+*.props       text eol=lf
+*.editorconfig text eol=lf
+
+# Visual Studio rewrites solution files with CRLF regardless, so do not fight it.
+*.sln         text eol=crlf
