@@ -443,6 +443,7 @@ public static class OsbMath
     };
 
     // t should be between 0d and 1d:
+    // Reference: https://ryoon.moe/link/easing-magicnumber/
     public static class EaseFunctions
     {
         private const Double PI = Math.PI;
